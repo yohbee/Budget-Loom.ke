@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { Sparkles, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -59,16 +58,21 @@ function AuthPage() {
     }
   }
 
-  async function handleOAuth(provider: "google" | "apple") {
-    setLoading(true);
-    const result = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin + "/auth",
-    });
-    if (result.error) {
-      toast.error("Could not sign in. Try again.");
-      setLoading(false);
-    }
+async function handleOAuth(provider: "google" | "apple") {
+  setLoading(true);
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${window.location.origin}/auth`,
+    },
+  });
+
+  if (error) {
+    toast.error("Could not sign in. Try again.");
+    setLoading(false);
   }
+}
 
   return (
     <div className="relative grid min-h-screen lg:grid-cols-2">
