@@ -58,13 +58,13 @@ function AuthPage() {
     }
   }
 
-async function handleOAuth(provider: "google" | "apple") {
+async function handleOAuth(provider: "google" ) {
   setLoading(true);
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: `${window.location.origin}/auth`,
+     redirectTo: `${window.location.origin}/app`,
     },
   });
 
@@ -122,7 +122,7 @@ async function handleOAuth(provider: "google" | "apple") {
             </button>
             <button
               type="button"
-              onClick={() => handleOAuth("apple")}
+              onClick={() => handleOAuth}
               disabled={loading}
               className="flex w-full items-center justify-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium transition hover:bg-accent disabled:opacity-50"
             >
