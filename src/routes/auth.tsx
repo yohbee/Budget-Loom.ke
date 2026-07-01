@@ -23,14 +23,31 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/app" });
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) navigate({ to: "/app" });
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+  if (typeof window === "undefined") return;
+
+  let mounted = true;
+
+  supabase.auth.getSession().then(({ data }) => {
+    if (mounted && data.session) {
+      navigate({ to: "/app" });
+    }
+  });
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (session) {
+      setTimeout(() => {
+        navigate({ to: "/app" });
+      }, 0);
+    }
+  });
+
+  return () => {
+    mounted = false;
+    subscription.unsubscribe();
+  };
+}, [navigate]);
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
