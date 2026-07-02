@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
@@ -8,14 +8,16 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign in — Budget Loom" },
-      { name: "description", content: "Sign in or create your Budget Loom account." },
+      {
+        name: "description",
+        content: "Sign in or create your Budget Loom account.",
+      },
     ],
   }),
   component: AuthPage,
 });
 
 function AuthPage() {
-  const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,21 +25,42 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted && data.session) {
-        navigate({ to: "/app", replace: true });
+    async function finishAuth() {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (error) {
+          toast.error("Could not complete Google sign-in.");
+          setLoading(false);
+          return;
+        }
+
+        window.history.replaceState({}, document.title, "/auth");
+        window.location.assign("/app");
+        return;
       }
-    });
+
+      const { data } = await supabase.auth.getSession();
+
+      if (mounted && data.session) {
+        window.location.assign("/app");
+      }
+    }
+
+    finishAuth();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        setTimeout(() => {
-          navigate({ to: "/app", replace: true });
-        }, 0);
+        window.location.assign("/app");
       }
     });
 
@@ -45,9 +68,9 @@ function AuthPage() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
-  async function handleEmail(e: React.FormEvent) {
+  async function handleEmail(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
@@ -71,10 +94,10 @@ function AuthPage() {
         });
 
         if (error) throw error;
+        window.location.assign("/app");
       }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Authentication failed");
-    } finally {
       setLoading(false);
     }
   }
@@ -85,7 +108,11 @@ function AuthPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth?next=/app`,
+        redirectTo: `${window.location.origin}/auth`,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
       },
     });
 
@@ -145,7 +172,7 @@ function AuthPage() {
               disabled={loading}
               className="flex w-full items-center justify-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium transition hover:bg-accent disabled:opacity-50"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   fill="#EA4335"
                   d="M12 11v3.2h7.9c-.3 2-2.3 5.9-7.9 5.9-4.7 0-8.6-3.9-8.6-8.7s3.9-8.7 8.6-8.7c2.7 0 4.5 1.1 5.5 2.1l3.8-3.6C18.9 1.1 15.8 0 12 0 5.4 0 0 5.4 0 12s5.4 12 12 12c6.9 0 11.5-4.9 11.5-11.7 0-.8-.1-1.4-.2-2H12z"
